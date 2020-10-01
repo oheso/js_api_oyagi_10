@@ -15,7 +15,7 @@
 
 </head>
 <!-- 
-※APIキーの入力箇所は「***api key***」で記載。
+※APIキーの入力箇所は「***api key***」で記載。(計3箇所)
 
 [概要]
 経路探索と同時に、目的駅付近のホテル探索ができる。
@@ -112,7 +112,7 @@
     $("#search").on("click", function() {
         //送信データをObject変数で用意
         const station_params = {
-            key:"***api key***",
+            key:accessKey,
             code:arrStationApp. getStationCode()
         };
         // console.log(station_params);
