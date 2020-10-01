@@ -10,11 +10,13 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src='https://www.bing.com/api/maps/mapcontrol?key=Ap0ZbuHf6ZxRhZfR8JsDRV35eGp4JWHsED_jtIXytFyZSUrozUcG-wLOBolP8kGT' async defer></script>
+    <script src='https://www.bing.com/api/maps/mapcontrol?key=***api key***' async defer></script>
     <script src="./js/BmapQuery.js"></script>
 
 </head>
 <!-- 
+※APIキーの入力箇所は「***api key***」で記載。
+
 [概要]
 経路探索と同時に、目的駅付近のホテル探索ができる。
 急すぎる出張とか、泊まるつもりのなかった出張に！
@@ -61,7 +63,7 @@
     document.getElementById('myMap').style.visibility = 'hidden';
 
     // 駅すぱあとの初期設定
-    var accessKey = "LE_egKqnGR7VVPqQ"; //アクセスキー
+    var accessKey = "***api key***"; //アクセスキー
     var depStationApp;
     var arrStationApp;
     var courseLight;
@@ -110,7 +112,7 @@
     $("#search").on("click", function() {
         //送信データをObject変数で用意
         const station_params = {
-            key:"LE_egKqnGR7VVPqQ",
+            key:"***api key***",
             code:arrStationApp. getStationCode()
         };
         // console.log(station_params);
@@ -142,7 +144,7 @@
         // ホテル探索クリックイベント
         $("#hotel_btn").on("click",function(){
             const hotel_params = {
-                applicationId:"1052406609241777304",
+                applicationId:"***api key***",
                 datumType:1,
                 latitude:lat,
                 longitude:lon,
