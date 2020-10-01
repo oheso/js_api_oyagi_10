@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset ="utf-8">
+    <meta name ="viewport" content ="width = device-width">
+    <title >駅すぱあとWebサービス経路探索サンプルアプリ</title>
+    <script src ="js/expGuiStation.js"></script>
+    <script src ="js/expGuiCourseLight.js"></script>
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src='https://www.bing.com/api/maps/mapcontrol?key=Ap0ZbuHf6ZxRhZfR8JsDRV35eGp4JWHsED_jtIXytFyZSUrozUcG-wLOBolP8kGT' async defer></script>
+    <script src="./js/BmapQuery.js"></script>
+
+</head>
+<!-- 
+[概要]
+経路探索と同時に、目的駅付近のホテル探索ができる。
+急すぎる出張とか、泊まるつもりのなかった出張に！
+使用したAPIは「駅すぱあと」「Bing maps」「楽天トラベル」の3種。
+
+[使用方法]
+出発地と目的地を入力（駅名候補表示機能あり）
+↓
+経路探索クリックで入力エラーの判定
+↓
+探索成功時に探索結果表示（外部リンク：駅すぱあと）
+ホテル探索ボタン出現
+探索条件：目的地周辺1km圏内,駅から近い順で最大10軒まで
+↓
+ホテル探索ボタンクリックで駅周辺マップ表示（ホテル位置表示）
+ホテル一覧表表示
+↓
+画像またはホテル名クリックでホテル詳細＆予約ページ（外部リンク：楽天トラベル）
+-->
+<body>
+    <div class="header"></div>
+    <div class="body">
+        <div>
+            出発地
+            <div id="depStation"></div>
+        </div>
+        <div class="to">
+            目的地
+            <div id="arrStation"></div>
+        </div>
+        <button id="search">経路探索</button>
+        <a id="ekispertUrl" class="" href="" target="_blank"></a>
+        <div class="">
+            <button type="button" id="hotel_btn" onclick="document.getElementById('myMap').style.visibility = 'visible'">ホテル探索<br>(目的駅から近い順,半径1km,10軒まで)</button>
+        </div>
+        <div id="myMap" style="width:936px;height:500px;"></div>
+    </div>
+        <div id="hotel_table"></div>
+</body>
+
+<script>
+    // 初期画面で不要な要素を非表示
+    document.getElementById('hotel_btn').style.visibility = 'hidden';
+    document.getElementById('myMap').style.visibility = 'hidden';
+
+    // 駅すぱあとの初期設定
+    var accessKey = "LE_egKqnGR7VVPqQ"; //アクセスキー
+    var depStationApp;
+    var arrStationApp;
+    var courseLight;
+
+    function init(){
+        depStationApp = new expGuiStation(document.getElementById("depStation"));
+        depStationApp.setConfigure("key",accessKey);
+        depStationApp.setConfigure("ssl",true);
+        depStationApp.dispStation();
+        arrStationApp = new expGuiStation(document.getElementById("arrStation"));
+        arrStationApp.setConfigure("key",accessKey);
+        arrStationApp.setConfigure("ssl",true);
+        arrStationApp.dispStation();
+        courseLight = new expGuiCourseLight();
+        courseLight.setConfigure("key",accessKey);
+        courseLight.setConfigure("ssl",true);
+    }
+    // 探索ボタンの動作
+    window.onload = function(){
+        var search = document.getElementById('search');
+        search.addEventListener('click',(e) => {
+            // 候補を閉じる
+            depStationApp.closeStationList();
+            arrStationApp.closeStationList();
+            var searchObj = courseLight.createSearchInterface();
+            // 出発着の設定
+            searchObj.setFrom(depStationApp.getStationCode());
+            searchObj.setTo(arrStationApp. getStationCode());
+            // 探索を実行
+            courseLight.search(searchObj,function(isSuccess){
+                if(!isSuccess){
+                    alert("探索結果が取得できませんでした");
+                }else{
+                    document.getElementById("ekispertUrl").textContent = "探索結果";
+                    document.getElementById("ekispertUrl").href = courseLight.getResourceURI();
+                    document.getElementById("ekispertUrl").className = "ekispertUrl";
+                    // 経路探索成功後にホテル探索ボタン表示
+                    document.getElementById("hotel_btn").style.visibility = "visible";
+                }
+            });
+        })
+    };
+    window.addEventListener('load',init);
+
+    // 経路探索クリックイベント
+    $("#search").on("click", function() {
+        //送信データをObject変数で用意
+        const station_params = {
+            key:"LE_egKqnGR7VVPqQ",
+            code:arrStationApp. getStationCode()
+        };
+        // console.log(station_params);
+
+        //Ajax（非同期通信）
+        axios.get('http://api.ekispert.jp/v1/json/station', {
+            params:station_params
+        })
+        .then(function (response) {
+            //データ受信成功！！showData関数にデータを渡す
+            showData(response.data);
+            console.log("StationData_success");//通信成功
+        }).catch(function (error) {
+            console.log(error);//通信Error
+        }).then(function () {
+            console.log("StationData_end");//通信OK/Error後に処理を必ずさせたい場合
+        });
+
+    });
+
+    //目的地駅データから緯度経度取得
+    function showData(data){
+        // console.log(data.ResultSet);
+        const lat = data.ResultSet.Point.GeoPoint.lati_d;
+        const lon = data.ResultSet.Point.GeoPoint.longi_d;
+        // console.log(lat);
+        // console.log(lon);
+
+        // ホテル探索クリックイベント
+        $("#hotel_btn").on("click",function(){
+            const hotel_params = {
+                applicationId:"1052406609241777304",
+                datumType:1,
+                latitude:lat,
+                longitude:lon,
+                hits:10, //探索件数
+                searchRadius:1, //探索半径(km)
+            };
+            // console.log(hotel_params);
+
+            //Ajax（非同期通信）
+            axios.get('https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426?', {
+                params:hotel_params
+            })
+            .then(function (response) {
+                //データ受信成功！！showData関数にデータを渡す
+                showData(response.data);
+                console.log("HotelData_success");//通信成功
+            }).catch(function (error) {
+                console.log(error);//通信Error
+            }).then(function () {
+                console.log("HotelData_end");//通信OK/Error後に処理を必ずさせたい場合
+            });
+
+            // ホテル探索結果一覧表のテーブル作成
+            const table = '<table id="table"><tr><th class="map_no">地図<br>番号</th><th class="hotel_img">イメージ</th><th class="hotel_name">ホテル名</th><th>PR</th></tr></table>';
+            $("#hotel_table").append(table);
+        });
+
+        // 目的地を中央とした地図を表示
+        const map = new Bmap("#myMap");
+        map.startMap(lat, lon, "load", 16);
+
+        // ホテルデータ取得
+        function showData(data){
+            // console.log(data.hotels);
+            const len = data.hotels.length; //データ数を取得
+
+            for( let i=0; i<len; i++){
+                // console.log(data.hotels[i].hotel[0].hotelBasicInfo);
+                // ホテル位置を地図上へ描写
+                let h= i+1
+                // console.log(h);
+                let pin = map.pinText(+data.hotels[i].hotel[0].hotelBasicInfo.latitude, +data.hotels[i].hotel[0].hotelBasicInfo.longitude, "title","subtitle",[h]+"");
+                // MapPinのクリックイベント
+                map.onPin(pin, "click", function(){
+                    open(data.hotels[i].hotel[0].hotelBasicInfo.hotelInformationUrl, "_blank") ;
+                });
+                // ホテル情報をテーブルへ挿入
+                $("#table").append('<tr><td><a href="'+data.hotels[i].hotel[0].hotelBasicInfo.hotelInformationUrl+'" target="_blank">'+[h]+'</a></td><td><a href="'+data.hotels[i].hotel[0].hotelBasicInfo.hotelInformationUrl+'" target="_blank"><img src="'+data.hotels[i].hotel[0].hotelBasicInfo.hotelThumbnailUrl+'"></a></td><td><a href="'+data.hotels[i].hotel[0].hotelBasicInfo.hotelInformationUrl+'" target="_blank">'+data.hotels[i].hotel[0].hotelBasicInfo.hotelName+'</a></td><td>'+data.hotels[i].hotel[0].hotelBasicInfo.hotelSpecial+'</td></tr>');
+            };
+        };
+    }
+</script>
+</html>
